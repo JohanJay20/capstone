@@ -27,3 +27,6 @@ package-lock.json
 *.sln
 *.sw?
 
+# Environment files
+.env
+.env.*
