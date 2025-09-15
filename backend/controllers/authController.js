@@ -30,7 +30,6 @@ export const manualLogin = async (req, res) => {
   res.json({ token, user });
 };
 
-// Google login (OAuth2)
 export const googleLogin = async (req, res) => {
   const { tokenId } = req.body;
 
@@ -45,30 +44,42 @@ export const googleLogin = async (req, res) => {
 
     let user = await User.findOne({ where: { email } });
 
-    // If user doesn't exist, create a new user with a generated password
     if (!user) {
+      console.log('🆕 Creating new user for:', email);
       const password = generatePassword();
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      user = await User.create({
-        googleId: sub,
-        givenName: given_name,
-        familyName: family_name,
-        displayName: name,
-        email,
-        image: picture,
-        password: hashedPassword,
-      });
+      try {
+        user = await User.create({
+          googleId: sub,
+          givenName: given_name,
+          familyName: family_name,
+          displayName: name,
+          email,
+          image: picture,
+          password: hashedPassword,
+        });
 
-      // Send the user a generated password email
-      await sendEmail(email, password);
+        console.log('✅ User created. Sending email...');
+        await sendEmail(email, password);
+        console.log('✅ Email sent to:', email);
+
+      } catch (creationError) {
+        console.error('❌ User creation or email failed:', creationError.message);
+        return res.status(500).json({ message: 'User creation or email failed', error: creationError.message });
+      }
+    } else {
+      console.log('👤 User already exists:', email);
     }
 
     const token = createToken(user);
     res.json({ token, user });
+
   } catch (err) {
+    console.error('❌ Google login failed:', err.message);
     res.status(500).json({ message: 'Google authentication failed', error: err.message });
   }
 };
+
 
 
